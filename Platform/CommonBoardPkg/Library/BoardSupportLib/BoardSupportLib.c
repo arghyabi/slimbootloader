@@ -70,6 +70,7 @@ FillBootOptionListFromCfgData (
   UINTN                       ImageIdx;
   UINT32                      Idx;
   UINT64                      Lba;
+  UINT64                      RamAddress;
   CHAR8                      *StrPtr;
 
   ImageIdx        = 1;
@@ -117,6 +118,9 @@ FillBootOptionListFromCfgData (
       // LBA should be defined as 64bit.
       // Will remove the typecast when the structure is fixed.
       BootOption->Image[ImageIdx].LbaImage.LbaAddr = (UINT32)Lba;
+    } else if ((StrPtr[0] == '0') && ((StrPtr[1] == 'x') || (StrPtr[1] == 'X')) &&
+               (AsciiStrHexToUint64S (StrPtr, NULL, &RamAddress) == RETURN_SUCCESS)) {
+      BootOption->Image[ImageIdx].RamAddress = (UINT32)RamAddress;
     } else {
       CopyMem (BootOption->Image[ImageIdx].FileImage.FileName, StrPtr,
                sizeof (BootOption->Image[ImageIdx].FileName));

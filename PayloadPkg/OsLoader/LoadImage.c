@@ -7,13 +7,6 @@
 
 #include "OsLoader.h"
 
-#define LOADED_IMAGES_INFO_SIGNATURE   SIGNATURE_32 ('L', 'I', 'I', 'S')
-
-typedef struct {
-  UINTN                   Signature;
-  LOADED_IMAGE           *LoadedImageList[LoadImageTypeMax];
-} LOADED_IMAGES_INFO;
-
 STATIC CONST CHAR16  *mConfigFileName[3] = {
   L"config.cfg",
   L"boot/grub/grub.cfg",

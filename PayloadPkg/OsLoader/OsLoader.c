@@ -847,10 +847,14 @@ InitBootDevice (
   //
   // Get OS boot device address
   //
-  BootMediumPciBase = GetDeviceAddr (DeviceType, DeviceInstance);
-  DEBUG ((DEBUG_INFO, "BootMediumPciBase(0x%x)\n", BootMediumPciBase));
-  BootMediumPciBase = TO_MM_PCI_ADDRESS (BootMediumPciBase);
-
+  if (DeviceType == OsBootDeviceMemory) {
+    BootMediumPciBase = 0x0;
+  }
+  else {
+    BootMediumPciBase = GetDeviceAddr (DeviceType, DeviceInstance);
+    DEBUG ((DEBUG_INFO, "BootMediumPciBase(0x%x)\n", BootMediumPciBase));
+    BootMediumPciBase = TO_MM_PCI_ADDRESS (BootMediumPciBase);
+  }
   //
   // Init Boot device functions
   //
@@ -1199,6 +1203,9 @@ BootOsImage (
   UINT8                StartPart;
   UINT8                EndPart;
   OS_BOOT_MEDIUM_TYPE  MediaType;
+  LOADED_IMAGES_INFO   *LoadedImagesInfo;
+  LOADED_IMAGE         *LoadedImage;
+  UINTN                BufferAddress;
 
   HwPartHandle      = NULL;
   LoadedImageHandle = NULL;
@@ -1224,6 +1231,14 @@ BootOsImage (
   if ((MediaType == OsBootDeviceUsb) && (OldHwPart == 0xFF)) {
     StartPart = 0;
     EndPart   = 0x10;
+  } else if (MediaType == OsBootDeviceMemory) {
+    //
+    // For boot from memory no need of hardware or software partition.
+    // Also in this case No need to load the image, So initilize the StartPart
+    // and EndPart varialbe with 1 and 0 to skip the for partition enumeration loop.
+    //
+    StartPart = 0x1;
+    EndPart   = 0x0;
   } else {
     StartPart = OldHwPart;
     EndPart   = OldHwPart;
@@ -1297,6 +1312,41 @@ BootOsImage (
     goto Exit;
   }
 
+  if (MediaType == OsBootDeviceMemory) {
+    // LoadedImageHandle
+    LoadedImagesInfo = (LOADED_IMAGES_INFO *)AllocateZeroPool (sizeof (LOADED_IMAGES_INFO));
+    if (LoadedImagesInfo == NULL) {
+      DEBUG ((DEBUG_ERROR, "Allocate memory for LoadedImagesInfo Failed\n"));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    LoadedImage = (LOADED_IMAGE *)AllocateZeroPool (sizeof (LOADED_IMAGE));
+    if (LoadedImage == NULL) {
+      DEBUG ((DEBUG_ERROR, "Allocate memory for LoadedImage Failed\n"));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    BufferAddress = OsBootOption->Image->RamAddress;
+    DEBUG ((DEBUG_INFO, "BufferAddress: 0x%x\n", BufferAddress));
+
+    LoadedImagesInfo->Signature = LOADED_IMAGES_INFO_SIGNATURE;
+    LoadedImage->ImageData.Addr = (VOID *)BufferAddress;
+
+    LoadedImage->Flags |= LOADED_IMAGE_COMPONENT;
+
+    if ( *((UINT32 *) BufferAddress) == CONTAINER_BOOT_SIGNATURE ) {
+      DEBUG ((DEBUG_INFO, "CONTAINER signature found in buffer\n"));
+      LoadedImage->Flags |= LOADED_IMAGE_CONTAINER;
+    } else {
+      DEBUG ((DEBUG_ERROR, "UNKNOWN signature in buffer\n"));
+      goto Exit;
+    }
+
+    LoadedImagesInfo->LoadedImageList[0] = LoadedImage;
+
+    LoadedImageHandle = (EFI_HANDLE)(UINTN)LoadedImagesInfo;
+  }
+
   //
   // Parse Boot Image
   //
@@ -1331,6 +1381,10 @@ BootOsImage (
   Status = StartBootImages (LoadedImageHandle);
 
 Exit:
+  if (OsBootOption->DevType == OsBootDeviceMemory) {
+    return Status;
+  }
+
   if (LoadedImageHandle != NULL) {
     UnloadBootImages (LoadedImageHandle, FALSE);
   }

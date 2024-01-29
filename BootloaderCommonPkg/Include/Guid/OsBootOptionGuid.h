@@ -186,6 +186,8 @@ typedef union {
   ///
   ///
   CONTAINER_IMAGE      ContainerImage;
+  /// RAM raw address
+  UINT32               RamAddress;
 } BOOT_IMAGE;
 
 typedef struct {

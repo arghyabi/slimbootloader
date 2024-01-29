@@ -94,6 +94,7 @@
 #define MAX_STR_SLICE_LEN        16
 
 #define PLD_EXTRA_MOD_RTCM       SIGNATURE_32('R', 'T', 'C', 'M')
+#define LOADED_IMAGES_INFO_SIGNATURE   SIGNATURE_32 ('L', 'I', 'I', 'S')
 
 typedef struct {
   UINT32       Pos;
@@ -149,6 +150,11 @@ typedef struct {
   UINT8                   ImageHash[HASH_DIGEST_MAX];
   RESERVED_CMDLINE_DATA   ReservedCmdlineData;
 } LOADED_IMAGE;
+
+typedef struct {
+  UINTN                   Signature;
+  LOADED_IMAGE           *LoadedImageList[LoadImageTypeMax];
+} LOADED_IMAGES_INFO;
 
 /**
 OS Loader module entry point. Can also be used to get the
